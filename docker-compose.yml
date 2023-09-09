@@ -1,0 +1,147 @@
+version: '3.9'
+
+services:
+  plex:
+    container_name: plex
+    image: lscr.io/linuxserver/plex:latest
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+      - VERSION=latest
+      - PLEX_CLAIM= #optional https://www.plex.tv/claim
+    volumes:
+      - /data/plex/config:/config
+      - /data/plex/tvseries:/tv
+      - /data/plex/movies:/movies
+      - /data/plex/transcode:/transcode
+    restart: always
+
+  sabnzbd:
+    container_name: sabnzbd
+    image: lscr.io/linuxserver/sabnzbd:latest
+    hostname: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+    volumes:
+      - /data/sabnzbd/config:/config
+      - /data/sabnzbd/downloads:/downloads #optional
+      - /data/sabnzbd/incomplete/downloads:/incomplete-downloads #optional
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+  
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    hostname: sonarr
+    depends_on:
+      - sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+    volumes:
+      - /data/sonarr/config:/config
+      - /data/plex/tvseries:/tv #optional
+      - /data/sabnzbd/downloads:/downloads #optional
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:latest
+    hostname: radarr
+    depends_on:
+      - sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+    volumes:
+      - /data/radarr/config:/config
+      - /data/plex/movies:/movies #optional
+      - /data/sabnzbd/downloads:/downloads #optional
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  overseerr:
+    container_name: overseerr
+    image: lscr.io/linuxserver/overseerr:latest
+    hostname: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+      - LOG_LEVEL=info
+    volumes:
+      - /data/overseerr/config:/config
+    ports:
+      - 5055:5055
+    restart: unless-stopped
+  
+  swag:
+    container_name: swag
+    image: lscr.io/linuxserver/swag:latest
+    hostname: swag
+    depends_on:
+      - sabnzbd
+      - sonarr
+      - radarr
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Kuching
+      - EMAIL=email@gmail.com
+      - URL=yourdomain.url
+      - SUBDOMAINS=services #optional
+      - ONLY_SUBDOMAINS=true #optional
+      - VALIDATION=http
+      - DNSPLUGIN=cloudflare #optional
+      # - CERTPROVIDER= #optional
+      # - PROPAGATION= #optional
+      # - EXTRA_DOMAINS= #optional
+      # - STAGING=false #optional
+    volumes:
+      - /data/swag/config:/config
+    ports:
+      - 440:443
+      - 81:80 #optional
+    restart: always
+  
+  timemachine:
+    container_name: timemachine
+    image: odarriba/timemachine
+    hostname: timemachine
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - AFP_LOGIN=admin
+      - AFP_PASSWORD=password
+      - AFP_SIZE_LIMIT=250000
+      - AFP_NAME=Backups
+    volumes:
+      - /data/timemachine/timemachine:/timemachine
+    ports:
+      - 548:548
+      - 636:636
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    hostname: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
