@@ -10,7 +10,7 @@ services:
       - PGID=1000
       - TZ=Asia/Kuching
       - VERSION=latest
-      - PLEX_CLAIM= #optional https://www.plex.tv/claim
+      - PLEX_CLAIM=claim-TxWWqzsjByVMmx97AxzM #optional https://www.plex.tv/claim
     volumes:
       - /data/plex/config:/config
       - /data/plex/tvseries:/tv
@@ -99,7 +99,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Kuching
-      - EMAIL=email@gmail.com
+      - EMAIL=howsenpl@hotmail.com
       - URL=yourdomain.url
       - SUBDOMAINS=services #optional
       - ONLY_SUBDOMAINS=true #optional
@@ -137,6 +137,41 @@ services:
         soft: 65536
         hard: 65536
     restart: unless-stopped
+
+  qbittorrent:
+    container_name: qbittorrent
+    image: linuxserver/qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1001
+      - TZ=Asia/Kuching
+      - UMASK_SET=022
+      - WEBUI_PORT=8080
+    volumes:
+      - /data/qbittorrent/config:/config
+      - /data/sabnzbd/downloads:/downloads
+      - /data/plex/tvseries:/tv
+      - /data/plex/movies:/movies
+    ports:
+      - 8081:8080
+      - 31321:31321/tcp
+      - 31321:31321/udp
+    restart: unless-stopped
+
+  samba:
+    container_name: samba
+    image: jenserat/samba-publicshare
+    tty: true
+    environment:
+      - PUID=1000
+      - PGID=1001
+    ports:
+      - 445:445
+      - 137:137
+      - 138:138
+      - 139:139
+    volumes:
+      - /data/plex:/srv
 
   watchtower:
     container_name: watchtower
